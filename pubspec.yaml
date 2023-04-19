@@ -36,6 +36,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
   intl_phone_number_input: ^0.7.2
+  pinput: ^2.2.31
 
 dev_dependencies:
   flutter_test:

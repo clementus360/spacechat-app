@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 import 'package:spacechat/pages/signin_page.dart';
+import 'package:spacechat/pages/verify_page.dart';
 
 class SignUpForm extends StatefulWidget {
   const SignUpForm({super.key});
@@ -56,7 +57,14 @@ class _SignUpFormState extends State<SignUpForm> {
             height: 160,
           ),
           ElevatedButton(
-              onPressed: () => null,
+              onPressed: () => {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: ((context) => const VerifyPage()),
+                      ),
+                    ),
+                  },
               style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   minimumSize: const Size(double.infinity, 0),
