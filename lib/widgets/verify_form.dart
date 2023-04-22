@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:spacechat/pages/signin_page.dart';
+import 'package:spacechat/pages/chatlist_page.dart';
 import 'package:pinput/pinput.dart';
 
 class VerifyForm extends StatefulWidget {
@@ -38,7 +38,14 @@ class _VerifyFormState extends State<VerifyForm> {
             height: 24,
           ),
           ElevatedButton(
-            onPressed: () => null,
+            onPressed: () => {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: ((context) => const ChatListPage()),
+                ),
+              ),
+            },
             style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 minimumSize: const Size(double.infinity, 0),
