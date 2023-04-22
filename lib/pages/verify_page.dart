@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:spacechat/widgets/signin_form.dart';
-import 'package:spacechat/widgets/signup_form.dart';
 import 'package:spacechat/widgets/verify_form.dart';
 
 class VerifyPage extends StatelessWidget {
