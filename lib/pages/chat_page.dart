@@ -136,18 +136,83 @@ class BottomBar extends StatelessWidget {
   }
 }
 
+class ChatBubble extends StatelessWidget {
+  final String message;
+  final String timestamp;
+  final String sender;
+  const ChatBubble({
+    super.key,
+    required this.message,
+    required this.timestamp,
+    required this.sender,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.only(
+          top: 16, right: sender == "1" ? 0 : 32, left: sender == "1" ? 32 : 0),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      decoration: BoxDecoration(
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
+        color: sender == "1" ? Colors.blue : Colors.grey.shade300,
+      ),
+      child: Column(
+          crossAxisAlignment:
+              sender == "1" ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          children: [
+            Text(
+              message,
+              style: TextStyle(
+                color: sender == "1" ? Colors.white : Colors.black,
+                fontFamily: 'Gilroy',
+                fontSize: 16,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+            Text(
+              timestamp,
+              style: TextStyle(
+                color: sender == "1" ? Colors.white : Colors.black,
+                fontFamily: 'Gilroy',
+                fontSize: 10,
+                fontWeight: FontWeight.w300,
+              ),
+            ),
+          ]),
+    );
+  }
+}
+
 class ChatPage extends StatelessWidget {
   const ChatPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       resizeToAvoidBottomInset: true,
-      appBar: MyAppBar(
+      appBar: const MyAppBar(
         height: 140,
       ),
-      body: Text("Welcome"),
-      bottomNavigationBar: BottomBar(),
+      body: ListView(
+        reverse: true,
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        children: const [
+          ChatBubble(
+              message:
+                  "Hello we are going to go get a few telephones and a candy bar to help you become the man you always wanted to be",
+              timestamp: "20:23",
+              sender: "1"),
+          ChatBubble(
+              message:
+                  "Hello, that is not what i wanted to hear, because if tou want to mess with me i will not accept whatever you say",
+              timestamp: "20:24",
+              sender: "2"),
+          ChatBubble(message: "How are you", timestamp: "20:26", sender: "1"),
+          ChatBubble(message: "I am fine", timestamp: "20:29", sender: "2"),
+        ],
+      ),
+      bottomNavigationBar: const BottomBar(),
     );
   }
 }

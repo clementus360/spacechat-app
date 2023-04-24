@@ -11,14 +11,17 @@ class VerifyForm extends StatefulWidget {
 
 class _VerifyFormState extends State<VerifyForm> {
   final _formKey = GlobalKey<FormState>();
+  final codeController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Form(
+      key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Pinput(
+          Pinput(
+            controller: codeController,
             length: 6,
           ),
           const SizedBox(
@@ -39,6 +42,7 @@ class _VerifyFormState extends State<VerifyForm> {
           ),
           ElevatedButton(
             onPressed: () => {
+              print(codeController.text),
               Navigator.push(
                 context,
                 MaterialPageRoute(

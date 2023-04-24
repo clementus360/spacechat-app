@@ -1,7 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 import 'package:spacechat/pages/signup_page.dart';
 import 'package:spacechat/pages/verify_page.dart';
+
+import 'package:http/http.dart' as http;
 
 class SignInForm extends StatefulWidget {
   const SignInForm({super.key});
@@ -12,10 +17,12 @@ class SignInForm extends StatefulWidget {
 
 class _SignInFormState extends State<SignInForm> {
   final _formKey = GlobalKey<FormState>();
+  late PhoneNumber _phoneNumber;
 
   @override
   Widget build(BuildContext context) {
     return Form(
+      key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -26,19 +33,39 @@ class _SignInFormState extends State<SignInForm> {
                 fontSize: 16,
                 fontWeight: FontWeight.w700),
           ),
-          InternationalPhoneNumberInput(onInputChanged: null),
+          InternationalPhoneNumberInput(
+            onInputChanged: (value) => {_phoneNumber = value},
+            initialValue: PhoneNumber(
+              isoCode: Platform.localeName.split('_').last,
+            ),
+            ignoreBlank: false,
+          ),
           const SizedBox(
             height: 160,
           ),
           ElevatedButton(
-              onPressed: () => {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: ((context) => const VerifyPage()),
-                      ),
-                    ),
-                  },
+              onPressed: () async {
+                if (_formKey.currentState!.validate()) {
+                  await signIn(_phoneNumber.phoneNumber).then((value) => {
+                        if (value.statusCode == 200)
+                          {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: ((context) => const VerifyPage()),
+                              ),
+                            )
+                          }
+                        else
+                          {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(value.body),
+                              duration: const Duration(seconds: 2),
+                            ))
+                          }
+                      });
+                }
+              },
               style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   minimumSize: const Size(double.infinity, 0),
@@ -73,4 +100,16 @@ class _SignInFormState extends State<SignInForm> {
       ),
     );
   }
+}
+
+Future<http.Response> signIn(phone) {
+  var uri = "http://192.168.1.69:3000/api/login";
+  return http.post(
+    Uri.parse(uri),
+    body: jsonEncode(
+      <String, String>{
+        'phone': phone,
+      },
+    ),
+  );
 }

@@ -1,7 +1,11 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 import 'package:spacechat/pages/signin_page.dart';
 import 'package:spacechat/pages/verify_page.dart';
+import 'package:http/http.dart' as http;
 
 class SignUpForm extends StatefulWidget {
   const SignUpForm({super.key});
@@ -12,10 +16,18 @@ class SignUpForm extends StatefulWidget {
 
 class _SignUpFormState extends State<SignUpForm> {
   final _formKey = GlobalKey<FormState>();
+  final nameController = TextEditingController();
+  final emailController = TextEditingController();
+  late PhoneNumber _phoneNumber;
+
+  final emailRegex = RegExp(
+    r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$",
+  );
 
   @override
   Widget build(BuildContext context) {
     return Form(
+      key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -27,6 +39,14 @@ class _SignUpFormState extends State<SignUpForm> {
                 fontWeight: FontWeight.w700),
           ),
           TextFormField(
+            controller: nameController,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return "Please enter your name";
+              }
+
+              return null;
+            },
             decoration: const InputDecoration(hintText: 'Enter a username'),
           ),
           const SizedBox(
@@ -40,6 +60,16 @@ class _SignUpFormState extends State<SignUpForm> {
                 fontWeight: FontWeight.w700),
           ),
           TextFormField(
+            controller: emailController,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return "Please enter an email";
+              }
+              if (!emailRegex.hasMatch(value)) {
+                return 'Please enter a valid email address';
+              }
+              return null;
+            },
             decoration: const InputDecoration(hintText: 'Enter your email'),
           ),
           const SizedBox(
@@ -52,19 +82,42 @@ class _SignUpFormState extends State<SignUpForm> {
                 fontSize: 16,
                 fontWeight: FontWeight.w700),
           ),
-          InternationalPhoneNumberInput(onInputChanged: null),
+          InternationalPhoneNumberInput(
+            onInputChanged: (value) => {_phoneNumber = value},
+            initialValue: PhoneNumber(
+              isoCode: Platform.localeName.split('_').last,
+            ),
+            ignoreBlank: false,
+          ),
           const SizedBox(
-            height: 160,
+            height: 120,
           ),
           ElevatedButton(
-              onPressed: () => {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: ((context) => const VerifyPage()),
-                      ),
-                    ),
-                  },
+              onPressed: () async {
+                if (_formKey.currentState!.validate()) {
+                  await signUp(nameController.text, emailController.text,
+                          _phoneNumber.phoneNumber)
+                      .then((value) => {
+                            if (value.statusCode == 200)
+                              {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: ((context) => const VerifyPage()),
+                                  ),
+                                )
+                              }
+                            else
+                              {
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(SnackBar(
+                                  content: Text(value.body),
+                                  duration: const Duration(seconds: 2),
+                                ))
+                              }
+                          });
+                }
+              },
               style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   minimumSize: const Size(double.infinity, 0),
@@ -99,4 +152,18 @@ class _SignUpFormState extends State<SignUpForm> {
       ),
     );
   }
+}
+
+Future<http.Response> signUp(name, email, phone) {
+  var uri = "http://192.168.1.69:3000/api/register";
+  return http.post(
+    Uri.parse(uri),
+    body: jsonEncode(
+      <String, String>{
+        'name': name,
+        'email': email,
+        'phone': phone,
+      },
+    ),
+  );
 }
