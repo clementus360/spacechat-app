@@ -1,11 +1,17 @@
+// Dart imports
 import 'dart:convert';
 import 'dart:io';
-
 import 'package:flutter/material.dart';
+
+// External dependencies
 import 'package:intl_phone_number_input/intl_phone_number_input.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+
+// Internal
 import 'package:spacechat/pages/signin_page.dart';
 import 'package:spacechat/pages/verify_page.dart';
-import 'package:http/http.dart' as http;
+import 'package:spacechat/utils/uri.dart';
 
 class SignUpForm extends StatefulWidget {
   const SignUpForm({super.key});
@@ -94,12 +100,17 @@ class _SignUpFormState extends State<SignUpForm> {
           ),
           ElevatedButton(
               onPressed: () async {
+                final SharedPreferences prefs =
+                    await SharedPreferences.getInstance();
+
                 if (_formKey.currentState!.validate()) {
                   await signUp(nameController.text, emailController.text,
                           _phoneNumber.phoneNumber)
                       .then((value) => {
                             if (value.statusCode == 200)
                               {
+                                prefs.setString("phoneNumber",
+                                    _phoneNumber.phoneNumber ?? ""),
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
@@ -155,7 +166,8 @@ class _SignUpFormState extends State<SignUpForm> {
 }
 
 Future<http.Response> signUp(name, email, phone) {
-  var uri = "http://192.168.1.69:3000/api/register";
+  var uri = ApiEndpoints.REGISTER;
+  print(uri);
   return http.post(
     Uri.parse(uri),
     body: jsonEncode(

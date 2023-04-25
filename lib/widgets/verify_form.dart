@@ -1,6 +1,14 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:spacechat/pages/chatlist_page.dart';
+
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pinput/pinput.dart';
+import 'package:http/http.dart' as http;
+
+import 'package:spacechat/pages/chatlist_page.dart';
+import 'package:spacechat/utils/uri.dart';
+import 'package:spacechat/widgets/signin_form.dart';
+import 'package:spacechat/widgets/timer.dart';
 
 class VerifyForm extends StatefulWidget {
   const VerifyForm({super.key});
@@ -12,6 +20,8 @@ class VerifyForm extends StatefulWidget {
 class _VerifyFormState extends State<VerifyForm> {
   final _formKey = GlobalKey<FormState>();
   final codeController = TextEditingController();
+
+  CountdownTimer timer = CountdownTimer();
 
   @override
   Widget build(BuildContext context) {
@@ -28,27 +38,45 @@ class _VerifyFormState extends State<VerifyForm> {
             height: 32,
           ),
           const Center(
-            child: Text(
-              "Time remaining: 1:49",
-              style: TextStyle(
-                fontFamily: 'Gilroy',
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
+            child: CountdownTimer(),
           ),
           const SizedBox(
             height: 24,
           ),
           ElevatedButton(
-            onPressed: () => {
-              print(codeController.text),
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: ((context) => const ChatListPage()),
-                ),
-              ),
+            onPressed: () async {
+              final SharedPreferences prefs =
+                  await SharedPreferences.getInstance();
+              final phoneNumber = prefs.getString("phoneNumber");
+
+              if (_formKey.currentState!.validate()) {
+                await verifyCode(codeController.text, phoneNumber)
+                    .then((value) async {
+                  if (value.statusCode == 200) {
+                    // Get token from response
+                    Map<String, dynamic> data = json.decode(value.body);
+
+                    // Set token to localstorage for later use
+                    prefs.setString("token", data['token']);
+
+                    // remove number from local storage for security
+                    prefs.remove("phoneNumber");
+
+                    // move to the chatlist page
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: ((context) => const ChatListPage()),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(value.body),
+                      duration: const Duration(seconds: 2),
+                    ));
+                  }
+                });
+              }
             },
             style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
@@ -68,7 +96,24 @@ class _VerifyFormState extends State<VerifyForm> {
             height: 16,
           ),
           ElevatedButton(
-            onPressed: null,
+            onPressed: () async {
+              final SharedPreferences prefs =
+                  await SharedPreferences.getInstance();
+              final phoneNumber = prefs.getString("phoneNumber");
+              await signIn(phoneNumber).then((value) => {
+                    if (value.statusCode == 200)
+                      {
+                        timer.resetTimer(60),
+                      }
+                    else
+                      {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(value.body),
+                          duration: const Duration(seconds: 2),
+                        ))
+                      }
+                  });
+            },
             style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 minimumSize: const Size(double.infinity, 0),
@@ -87,4 +132,17 @@ class _VerifyFormState extends State<VerifyForm> {
       ),
     );
   }
+}
+
+Future<http.Response> verifyCode(otpCode, phoneNumber) async {
+  var uri = ApiEndpoints.VERIFY;
+  return http.post(
+    Uri.parse(uri),
+    body: jsonEncode(
+      <String, String>{
+        'phoneNumber': phoneNumber,
+        'otpCode': otpCode,
+      },
+    ),
+  );
 }
