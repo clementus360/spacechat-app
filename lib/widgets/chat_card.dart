@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:spacechat/pages/chat_page.dart';
 
 class ChatCard extends StatelessWidget {
-  const ChatCard({super.key});
+  final id;
+  final name;
+  final image;
+  const ChatCard({super.key, this.id, this.name, this.image});
 
   @override
   Widget build(BuildContext context) {
@@ -34,23 +37,23 @@ class ChatCard extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
-                    "User Name",
-                    style: TextStyle(
+                    name,
+                    style: const TextStyle(
                       fontFamily: 'Gilroy',
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  SizedBox(
+                  const SizedBox(
                     height: 8,
                   ),
                   Text(
-                    "Message placeholder",
+                    id.toString(),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontFamily: 'Gilroy',
                       fontSize: 16,
                       fontWeight: FontWeight.w400,

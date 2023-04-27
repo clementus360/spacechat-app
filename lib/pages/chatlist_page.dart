@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:spacechat/data/db.dart';
+import 'package:spacechat/data/types.dart';
 import 'package:spacechat/widgets/chat_card.dart';
 
 class MyAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -58,8 +60,28 @@ class MyAppBar extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => Size.fromHeight(height);
 }
 
-class ChatListPage extends StatelessWidget {
+class ChatListPage extends StatefulWidget {
   const ChatListPage({super.key});
+
+  @override
+  State<ChatListPage> createState() => _ChatListPageState();
+}
+
+class _ChatListPageState extends State<ChatListPage> {
+  Future<List<Chat>> _getChats() async {
+    final dbHelper = DatabaseHelper();
+    final db = await dbHelper.database;
+
+    final List<Map<String, dynamic>> _chats = await db.query('chats');
+
+    return List.generate(_chats.length, (index) {
+      return Chat(
+          id: _chats[index]['id'],
+          name: _chats[index]['name'],
+          receiver: _chats[index]['receiver'],
+          imageUrl: _chats[index]['image']);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,9 +90,27 @@ class ChatListPage extends StatelessWidget {
       appBar: const MyAppBar(
         height: 140,
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: const [ChatCard(), ChatCard()],
+      body: FutureBuilder<List<Chat>>(
+        future: _getChats(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return ListView.builder(
+              itemCount: snapshot.data?.length,
+              itemBuilder: (context, index) {
+                final chat = snapshot.data![index];
+                return ChatCard(
+                  id: chat.id,
+                  name: chat.name,
+                  image: chat.imageUrl,
+                );
+              },
+            );
+          } else if (snapshot.hasError) {
+            return Text('Error: ${snapshot.error}');
+          } else {
+            return const CircularProgressIndicator();
+          }
+        },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => null,
