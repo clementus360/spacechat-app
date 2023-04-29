@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:spacechat/data/db.dart';
+import 'package:spacechat/data/types.dart';
 
 class MyAppBar extends StatelessWidget implements PreferredSizeWidget {
+  final name;
   final double height;
-  const MyAppBar({super.key, required this.height});
+  const MyAppBar({super.key, required this.height, required this.name});
 
   @override
   Widget build(BuildContext context) {
@@ -47,9 +51,9 @@ class MyAppBar extends StatelessWidget implements PreferredSizeWidget {
           const SizedBox(
             width: 16,
           ),
-          const Text(
-            "User Name",
-            style: TextStyle(
+          Text(
+            name,
+            style: const TextStyle(
               fontFamily: 'Gilroy',
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -138,7 +142,7 @@ class BottomBar extends StatelessWidget {
 
 class ChatBubble extends StatelessWidget {
   final String message;
-  final String timestamp;
+  final DateTime timestamp;
   final String sender;
   const ChatBubble({
     super.key,
@@ -171,7 +175,7 @@ class ChatBubble extends StatelessWidget {
               ),
             ),
             Text(
-              timestamp,
+              DateFormat.Hm().format(timestamp),
               style: TextStyle(
                 color: sender == "1" ? Colors.white : Colors.black,
                 fontFamily: 'Gilroy',
@@ -185,32 +189,56 @@ class ChatBubble extends StatelessWidget {
 }
 
 class ChatPage extends StatelessWidget {
-  const ChatPage({super.key});
+  final String name;
+  final int id;
+  const ChatPage({super.key, required this.id, required this.name});
+
+  Future<List<Message>> _getMessages() async {
+    final dbHelper = DatabaseHelper();
+    final db = await dbHelper.database;
+
+    final List<Map<String, dynamic>> messages = await db.query('messages');
+    print(messages);
+
+    return List.generate(messages.length, (index) {
+      return Message(
+        id: messages[index]['id'],
+        payload: messages[index]['payload'],
+        sender: messages[index]['sender'],
+        timestamp: messages[index]['timestamp'],
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      appBar: const MyAppBar(
+      appBar: MyAppBar(
+        name: name,
         height: 140,
       ),
-      body: ListView(
-        reverse: true,
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-        children: const [
-          ChatBubble(
-              message:
-                  "Hello we are going to go get a few telephones and a candy bar to help you become the man you always wanted to be",
-              timestamp: "20:23",
-              sender: "1"),
-          ChatBubble(
-              message:
-                  "Hello, that is not what i wanted to hear, because if tou want to mess with me i will not accept whatever you say",
-              timestamp: "20:24",
-              sender: "2"),
-          ChatBubble(message: "How are you", timestamp: "20:26", sender: "1"),
-          ChatBubble(message: "I am fine", timestamp: "20:29", sender: "2"),
-        ],
+      body: FutureBuilder<List<Message>>(
+        future: _getMessages(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return ListView.builder(
+              itemCount: snapshot.data?.length,
+              itemBuilder: (context, index) {
+                final message = snapshot.data![index];
+                print(message);
+                return ChatBubble(
+                    message: message.payload,
+                    timestamp: message.timestamp,
+                    sender: message.sender);
+              },
+            );
+          } else if (snapshot.hasError) {
+            return Text('Error: ${snapshot.error}');
+          } else {
+            return const CircularProgressIndicator();
+          }
+        },
       ),
       bottomNavigationBar: const BottomBar(),
     );

@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:spacechat/pages/chat_page.dart';
 
 class ChatCard extends StatelessWidget {
-  final id;
-  final name;
-  final image;
-  const ChatCard({super.key, this.id, this.name, this.image});
+  final int id;
+  final String name;
+  final String? image;
+  const ChatCard(
+      {super.key, required this.id, required this.name, required this.image});
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +15,10 @@ class ChatCard extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: ((context) => const ChatPage()),
+            builder: ((context) => ChatPage(
+                  name: name,
+                  id: id,
+                )),
           ),
         ),
       },

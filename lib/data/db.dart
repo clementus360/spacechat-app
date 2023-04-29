@@ -14,6 +14,24 @@ class DatabaseHelper {
     _database!.insert("chats", {'name': 'Paul', 'receiver': 'test1'});
     _database!.insert("chats", {'name': 'Annie', 'receiver': 'test2'});
     _database!.insert("chats", {'name': 'Lisa', 'receiver': 'test3'});
+    _database!.insert("messages", {
+      'payload': 'test',
+      'sender': '1',
+      'timestamp': DateTime.now().toIso8601String(),
+      'chatId': 1
+    });
+    _database!.insert("messages", {
+      'payload': 'test',
+      'sender': '1',
+      'timestamp': DateTime.now().toIso8601String(),
+      'chatId': 1
+    });
+    _database!.insert("messages", {
+      'payload': 'test',
+      'sender': '1',
+      'timestamp': DateTime.now().toIso8601String(),
+      'chatId': 1
+    });
     return _database!;
   }
 
@@ -39,6 +57,7 @@ class DatabaseHelper {
               id INTEGER PRIMARY KEY,
               payload TEXT,
               sender TEXT,
+              timestamp TEXT,
               chatId INTEGER,
               FOREIGN KEY (chatId) REFERENCES chats (id)
             )

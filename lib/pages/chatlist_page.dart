@@ -72,14 +72,14 @@ class _ChatListPageState extends State<ChatListPage> {
     final dbHelper = DatabaseHelper();
     final db = await dbHelper.database;
 
-    final List<Map<String, dynamic>> _chats = await db.query('chats');
+    final List<Map<String, dynamic>> chats = await db.query('chats');
 
-    return List.generate(_chats.length, (index) {
+    return List.generate(chats.length, (index) {
       return Chat(
-          id: _chats[index]['id'],
-          name: _chats[index]['name'],
-          receiver: _chats[index]['receiver'],
-          imageUrl: _chats[index]['image']);
+          id: chats[index]['id'],
+          name: chats[index]['name'],
+          receiver: chats[index]['receiver'],
+          imageUrl: chats[index]['image']);
     });
   }
 
