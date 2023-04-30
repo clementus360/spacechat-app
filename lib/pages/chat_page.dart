@@ -197,15 +197,15 @@ class ChatPage extends StatelessWidget {
     final dbHelper = DatabaseHelper();
     final db = await dbHelper.database;
 
-    final List<Map<String, dynamic>> messages = await db.query('messages');
-    print(messages);
+    final List<Map<String, dynamic>> messages =
+        await db.query('messages', where: 'chatId= ?', whereArgs: [id]);
 
     return List.generate(messages.length, (index) {
       return Message(
         id: messages[index]['id'],
         payload: messages[index]['payload'],
         sender: messages[index]['sender'],
-        timestamp: messages[index]['timestamp'],
+        timestamp: DateTime.parse(messages[index]['timestamp']),
       );
     });
   }

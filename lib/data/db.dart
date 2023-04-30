@@ -21,10 +21,10 @@ class DatabaseHelper {
       'chatId': 1
     });
     _database!.insert("messages", {
-      'payload': 'test',
+      'payload': 'testoooo',
       'sender': '1',
       'timestamp': DateTime.now().toIso8601String(),
-      'chatId': 1
+      'chatId': 2
     });
     _database!.insert("messages", {
       'payload': 'test',
