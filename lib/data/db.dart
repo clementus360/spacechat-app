@@ -1,5 +1,6 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:uuid/uuid.dart';
 
 class DatabaseHelper {
   Database? _database;
@@ -9,29 +10,16 @@ class DatabaseHelper {
       return _database!;
     }
 
+    final uuid = Uuid();
+
     _database = (await _initDatabase())!;
 
-    _database!.insert("chats", {'name': 'Paul', 'receiver': 'test1'});
-    _database!.insert("chats", {'name': 'Annie', 'receiver': 'test2'});
-    _database!.insert("chats", {'name': 'Lisa', 'receiver': 'test3'});
-    _database!.insert("messages", {
-      'payload': 'test',
-      'sender': '1',
-      'timestamp': DateTime.now().toIso8601String(),
-      'chatId': 1
-    });
-    _database!.insert("messages", {
-      'payload': 'testoooo',
-      'sender': '1',
-      'timestamp': DateTime.now().toIso8601String(),
-      'chatId': 2
-    });
-    _database!.insert("messages", {
-      'payload': 'test',
-      'sender': '1',
-      'timestamp': DateTime.now().toIso8601String(),
-      'chatId': 1
-    });
+    _database!
+        .insert("chats", {'id': uuid.v4(), 'name': 'Paul', 'receiver': '1'});
+    _database!.insert(
+        "chats", {'id': uuid.v4(), 'name': 'Annie', 'receiver': 'test2'});
+    _database!.insert(
+        "chats", {'id': uuid.v4(), 'name': 'Lisa', 'receiver': 'test3'});
     return _database!;
   }
 
@@ -45,7 +33,7 @@ class DatabaseHelper {
         onCreate: (db, version) async {
           await db.execute('''
             CREATE TABLE chats (
-              id INTEGER PRIMARY KEY,
+              id TEXT PRIMARY KEY,
               name TEXT,
               receiver TEXT,
               image TEXT
@@ -54,11 +42,12 @@ class DatabaseHelper {
 
           await db.execute('''
             CREATE TABLE messages (
-              id INTEGER PRIMARY KEY,
+              id TEXT PRIMARY KEY,
               payload TEXT,
               sender TEXT,
+              receiver TEXT,
               timestamp TEXT,
-              chatId INTEGER,
+              chatId TEXT,
               FOREIGN KEY (chatId) REFERENCES chats (id)
             )
           ''');

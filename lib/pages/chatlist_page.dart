@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:spacechat/data/db.dart';
 import 'package:spacechat/data/types.dart';
+import 'package:spacechat/helpers/socket.dart';
 import 'package:spacechat/widgets/chat_card.dart';
 
 class MyAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -68,12 +70,20 @@ class ChatListPage extends StatefulWidget {
 }
 
 class _ChatListPageState extends State<ChatListPage> {
+  late SocketConnection _socketConnection;
+
+  @override
+  void initState() {
+    super.initState();
+    _socketConnection = SocketConnection();
+    _socketConnection.initializeSocketConnection();
+  }
+
   Future<List<Chat>> _getChats() async {
     final dbHelper = DatabaseHelper();
     final db = await dbHelper.database;
 
     final List<Map<String, dynamic>> chats = await db.query('chats');
-
     return List.generate(chats.length, (index) {
       return Chat(
           id: chats[index]['id'],
@@ -99,9 +109,11 @@ class _ChatListPageState extends State<ChatListPage> {
               itemBuilder: (context, index) {
                 final chat = snapshot.data![index];
                 return ChatCard(
-                  id: chat.id,
+                  chatId: chat.id,
                   name: chat.name,
+                  receiver: chat.receiver,
                   image: chat.imageUrl,
+                  socketConnection: _socketConnection,
                 );
               },
             );

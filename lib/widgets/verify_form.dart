@@ -59,8 +59,8 @@ class _VerifyFormState extends State<VerifyForm> {
                     // Set token to localstorage for later use
                     prefs.setString("token", data['token']);
 
-                    // remove number from local storage for security
-                    prefs.remove("phoneNumber");
+                    // // remove number from local storage for security
+                    // prefs.remove("phoneNumber");
 
                     // move to the chatlist page
                     Navigator.push(

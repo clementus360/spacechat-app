@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:spacechat/helpers/socket.dart';
 import 'package:spacechat/pages/chat_page.dart';
 
 class ChatCard extends StatelessWidget {
-  final int id;
+  final String chatId;
   final String name;
+  final String receiver;
   final String? image;
-  const ChatCard(
-      {super.key, required this.id, required this.name, required this.image});
+  final SocketConnection socketConnection;
+  const ChatCard({
+    super.key,
+    required this.chatId,
+    required this.name,
+    required this.receiver,
+    required this.image,
+    required this.socketConnection,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +26,9 @@ class ChatCard extends StatelessWidget {
           MaterialPageRoute(
             builder: ((context) => ChatPage(
                   name: name,
-                  id: id,
+                  chatId: chatId,
+                  receiver: receiver,
+                  socketConnection: socketConnection,
                 )),
           ),
         ),
@@ -54,7 +65,7 @@ class ChatCard extends StatelessWidget {
                     height: 8,
                   ),
                   Text(
-                    id.toString(),
+                    chatId.toString(),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
                     style: const TextStyle(

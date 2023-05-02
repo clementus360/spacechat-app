@@ -1,7 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:uuid/uuid.dart';
 import 'package:spacechat/data/db.dart';
 import 'package:spacechat/data/types.dart';
+import 'package:spacechat/helpers/socket.dart';
 
 class MyAppBar extends StatelessWidget implements PreferredSizeWidget {
   final name;
@@ -82,8 +88,31 @@ class MyAppBar extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => Size.fromHeight(height);
 }
 
-class BottomBar extends StatelessWidget {
-  const BottomBar({super.key});
+class BottomBar extends StatefulWidget {
+  final String chatId;
+  final SocketConnection socketConnection;
+  final String receiver;
+  final updateMessages;
+  const BottomBar({
+    super.key,
+    required this.chatId,
+    required this.receiver,
+    required this.socketConnection,
+    required this.updateMessages,
+  });
+
+  @override
+  State<BottomBar> createState() => _BottomBarState();
+}
+
+class _BottomBarState extends State<BottomBar> {
+  final _formKey = GlobalKey<FormState>();
+  final messageController = TextEditingController();
+
+  Future<String> getUserId() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString("phoneNumber")!;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -117,6 +146,8 @@ class BottomBar extends StatelessWidget {
           ),
           Expanded(
             child: TextField(
+              key: _formKey,
+              controller: messageController,
               decoration: InputDecoration(
                 border: OutlineInputBorder(
                   borderSide: const BorderSide(color: Colors.blueGrey),
@@ -131,7 +162,20 @@ class BottomBar extends StatelessWidget {
             width: 16,
           ),
           IconButton(
-            onPressed: () => null,
+            onPressed: () async {
+              var uuid = const Uuid();
+              final message = Message(
+                id: uuid.v4(),
+                payload: messageController.text,
+                chatId: widget.chatId,
+                sender: await getUserId(),
+                receiver: widget.receiver,
+                timestamp: DateTime.now(),
+              );
+              widget.socketConnection.sendMessage(message);
+              widget.updateMessages();
+              messageController.text = '';
+            },
             icon: const Icon(Icons.send),
           ),
         ],
@@ -151,96 +195,202 @@ class ChatBubble extends StatelessWidget {
     required this.sender,
   });
 
+  Future<String> _getUserId() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString("phoneNumber") ?? '';
+    return userId;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(
-          top: 16, right: sender == "1" ? 0 : 32, left: sender == "1" ? 32 : 0),
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.all(Radius.circular(16)),
-        color: sender == "1" ? Colors.blue : Colors.grey.shade300,
-      ),
-      child: Column(
-          crossAxisAlignment:
-              sender == "1" ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            Text(
-              message,
-              style: TextStyle(
-                color: sender == "1" ? Colors.white : Colors.black,
-                fontFamily: 'Gilroy',
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
-              ),
+    return FutureBuilder<String>(
+        future: _getUserId(),
+        builder: (context, snapshot) {
+          final userId = snapshot.data ?? '';
+          return Container(
+            margin: EdgeInsets.only(
+                top: 16,
+                right: sender == userId ? 0 : 32,
+                left: sender == userId ? 32 : 0),
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.all(Radius.circular(16)),
+              color: sender == userId ? Colors.blue : Colors.grey.shade300,
             ),
-            Text(
-              DateFormat.Hm().format(timestamp),
-              style: TextStyle(
-                color: sender == "1" ? Colors.white : Colors.black,
-                fontFamily: 'Gilroy',
-                fontSize: 10,
-                fontWeight: FontWeight.w300,
-              ),
-            ),
-          ]),
-    );
+            child: Column(
+                crossAxisAlignment: sender == userId
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message,
+                    style: TextStyle(
+                      color: sender == userId ? Colors.white : Colors.black,
+                      fontFamily: 'Gilroy',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  Text(
+                    DateFormat.Hm().format(timestamp),
+                    style: TextStyle(
+                      color: sender == userId ? Colors.white : Colors.black,
+                      fontFamily: 'Gilroy',
+                      fontSize: 10,
+                      fontWeight: FontWeight.w300,
+                    ),
+                  ),
+                ]),
+          );
+        });
   }
 }
 
-class ChatPage extends StatelessWidget {
+class ChatPage extends StatefulWidget {
   final String name;
-  final int id;
-  const ChatPage({super.key, required this.id, required this.name});
+  final String chatId;
+  final String receiver;
+  final SocketConnection socketConnection;
 
-  Future<List<Message>> _getMessages() async {
+  const ChatPage({
+    Key? key,
+    required this.chatId,
+    required this.name,
+    required this.receiver,
+    required this.socketConnection,
+  }) : super(key: key);
+
+  @override
+  State<ChatPage> createState() => _ChatPageState();
+}
+
+class _ChatPageState extends State<ChatPage> {
+  late Stream<List<Message>> _messagesStream;
+
+  _ChatPageState() {
+    _messagesStream = _getMessages();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  Stream<List<Message>> _getMessages() async* {
     final dbHelper = DatabaseHelper();
     final db = await dbHelper.database;
 
-    final List<Map<String, dynamic>> messages =
-        await db.query('messages', where: 'chatId= ?', whereArgs: [id]);
+    print('${db.isOpen}:1');
 
-    return List.generate(messages.length, (index) {
-      return Message(
-        id: messages[index]['id'],
-        payload: messages[index]['payload'],
-        sender: messages[index]['sender'],
-        timestamp: DateTime.parse(messages[index]['timestamp']),
-      );
+    try {
+      final List<Map<String, dynamic>> messages = await db.query('messages',
+          where: 'chatId = ?',
+          whereArgs: [widget.chatId],
+          orderBy: 'timestamp DESC');
+
+      final List<Message> messagesList =
+          List.generate(messages.length, (index) {
+        return Message(
+          id: messages[index]['id'],
+          payload: messages[index]['payload'],
+          chatId: messages[index]['chatId'],
+          sender: messages[index]['sender'],
+          receiver: messages[index]['receiver'],
+          timestamp: DateTime.parse(messages[index]['timestamp']),
+        );
+      });
+
+      // Yield the messages list to the stream
+      yield messagesList;
+
+      print('${db.isOpen}:2');
+
+      // Listen for changes in the messages table and yield new messages
+      await for (final message in db.query('messages',
+          where: 'chatId = ?', whereArgs: [widget.chatId]).asStream()) {
+        print('${db.isOpen}:3');
+        final List<Message> updatedMessagesList =
+            List.generate(message.length, (index) {
+          return Message(
+            id: messages[index]['id'],
+            payload: messages[index]['payload'],
+            chatId: messages[index]['chatId'],
+            sender: messages[index]['sender'],
+            receiver: messages[index]['receiver'],
+            timestamp: DateTime.parse(messages[index]['timestamp']),
+          );
+        });
+        print('${db.isOpen}:4');
+        yield updatedMessagesList;
+      }
+    } on DatabaseException catch (e) {
+      print('Error: ${e.result}');
+      yield [];
+    } finally {
+      await db.close();
+      print('${db.isOpen}:5');
+    }
+
+    print('${db.isOpen}:5');
+  }
+
+  void updateMessages() {
+    setState(() {
+      _messagesStream = _getMessages();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: true,
-      appBar: MyAppBar(
-        name: name,
-        height: 140,
+    return ScaffoldMessenger(
+      child: Builder(
+        builder: (context) => Scaffold(
+          resizeToAvoidBottomInset: true,
+          appBar: MyAppBar(
+            name: widget.name,
+            height: 140,
+          ),
+          body: StreamBuilder<List<Message>>(
+            stream: _messagesStream,
+            builder: (context, snapshot) {
+              print(snapshot);
+              if (snapshot.hasData) {
+                return ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  reverse: true,
+                  itemCount: snapshot.data?.length,
+                  itemBuilder: (context, index) {
+                    final message = snapshot.data![index];
+                    return ChatBubble(
+                        message: message.payload,
+                        timestamp: message.timestamp,
+                        sender: message.sender);
+                  },
+                );
+              } else if (snapshot.hasError) {
+                return Text('Error: ${snapshot.error}');
+              } else {
+                return const CircularProgressIndicator();
+              }
+            },
+          ),
+          bottomNavigationBar: MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              viewInsets: EdgeInsets.zero,
+            ),
+            child: Padding(
+              padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom),
+              child: BottomBar(
+                chatId: widget.chatId,
+                receiver: widget.receiver,
+                socketConnection: widget.socketConnection,
+                updateMessages: updateMessages,
+              ),
+            ),
+          ),
+        ),
       ),
-      body: FutureBuilder<List<Message>>(
-        future: _getMessages(),
-        builder: (context, snapshot) {
-          if (snapshot.hasData) {
-            return ListView.builder(
-              itemCount: snapshot.data?.length,
-              itemBuilder: (context, index) {
-                final message = snapshot.data![index];
-                print(message);
-                return ChatBubble(
-                    message: message.payload,
-                    timestamp: message.timestamp,
-                    sender: message.sender);
-              },
-            );
-          } else if (snapshot.hasError) {
-            return Text('Error: ${snapshot.error}');
-          } else {
-            return const CircularProgressIndicator();
-          }
-        },
-      ),
-      bottomNavigationBar: const BottomBar(),
     );
   }
 }
