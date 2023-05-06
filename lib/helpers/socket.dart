@@ -66,7 +66,10 @@ class SocketConnection {
   }
 
   Future<void> initializeSocketConnection() async {
+    print("initializing socket.......");
     if (_isConnected || _isConnecting) {
+      print("testoo");
+      print('$_isConnected and $_isConnecting');
       return;
     }
 
@@ -74,17 +77,26 @@ class SocketConnection {
 
     try {
       final uri = Uri.parse('${ApiEndpoints.SOCKET}/$_userId?ticket=$_ticket');
+      print(uri);
       _channel = WebSocketChannel.connect(uri);
       _isConnected = true;
       _isConnecting = false;
 
+      print("chhallenge");
+      print(_channel);
+
+      // Timer.periodic(const Duration(minutes: 1), (timer) {
+      //   if (!_isConnected) {
+      //     _reconnect();
+      //   }
+      // });
+
       _channel.stream.listen(
         (message) {
-          print(message);
           final jsonMessage = jsonDecode(message);
-          print(jsonMessage);
           final Message messageObj = Message.fromJson(jsonMessage);
           _messageStreamController.add(messageObj);
+          print(jsonMessage);
           addMessageToDB(messageObj);
         },
         onError: (error) {
@@ -115,10 +127,13 @@ class SocketConnection {
   }
 
   void sendMessage(Message message) {
+    print(_isConnected);
     if (!_isConnected) {
       _reconnect();
       throw Exception('Socket connection is not established');
     }
+
+    print(message.payload);
 
     final jsonMessage = jsonEncode({
       'id': message.id,

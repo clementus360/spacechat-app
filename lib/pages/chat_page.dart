@@ -303,35 +303,32 @@ class _ChatPageState extends State<ChatPage> {
       // Yield the messages list to the stream
       yield messagesList;
 
-      print('${db.isOpen}:2');
-
       // Listen for changes in the messages table and yield new messages
-      await for (final message in db.query('messages',
-          where: 'chatId = ?', whereArgs: [widget.chatId]).asStream()) {
-        print('${db.isOpen}:3');
+      await for (final message in db
+          .query('messages',
+              where: 'chatId = ?',
+              whereArgs: [widget.chatId],
+              orderBy: 'timestamp DESC')
+          .asStream()) {
         final List<Message> updatedMessagesList =
             List.generate(message.length, (index) {
           return Message(
-            id: messages[index]['id'],
-            payload: messages[index]['payload'],
-            chatId: messages[index]['chatId'],
-            sender: messages[index]['sender'],
-            receiver: messages[index]['receiver'],
-            timestamp: DateTime.parse(messages[index]['timestamp']),
+            id: message[index]['id'] as String,
+            payload: message[index]['payload'] as String,
+            chatId: message[index]['chatId'] as String,
+            sender: message[index]['sender'] as String,
+            receiver: message[index]['receiver'] as String,
+            timestamp: DateTime.parse(message[index]['timestamp'] as String),
           );
         });
-        print('${db.isOpen}:4');
         yield updatedMessagesList;
+        updateMessages();
       }
     } on DatabaseException catch (e) {
-      print('Error: ${e.result}');
       yield [];
     } finally {
-      await db.close();
-      print('${db.isOpen}:5');
+      // await db.close();
     }
-
-    print('${db.isOpen}:5');
   }
 
   void updateMessages() {
@@ -353,7 +350,6 @@ class _ChatPageState extends State<ChatPage> {
           body: StreamBuilder<List<Message>>(
             stream: _messagesStream,
             builder: (context, snapshot) {
-              print(snapshot);
               if (snapshot.hasData) {
                 return ListView.builder(
                   padding: const EdgeInsets.only(bottom: 24),

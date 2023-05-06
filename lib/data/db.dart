@@ -20,6 +20,8 @@ class DatabaseHelper {
         "chats", {'id': uuid.v4(), 'name': 'Annie', 'receiver': 'test2'});
     _database!.insert(
         "chats", {'id': uuid.v4(), 'name': 'Lisa', 'receiver': 'test3'});
+    _database!.insert("chats",
+        {'id': uuid.v4(), 'name': 'Clement', 'receiver': '+250787316052'});
     return _database!;
   }
 
