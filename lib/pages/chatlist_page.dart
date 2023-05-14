@@ -4,6 +4,7 @@ import 'package:spacechat/data/db.dart';
 import 'package:spacechat/data/types.dart';
 import 'package:spacechat/helpers/socket.dart';
 import 'package:spacechat/widgets/chat_card.dart';
+import 'package:sqflite/sqflite.dart';
 
 class MyAppBar extends StatelessWidget implements PreferredSizeWidget {
   final double height;
@@ -71,12 +72,55 @@ class ChatListPage extends StatefulWidget {
 
 class _ChatListPageState extends State<ChatListPage> {
   late SocketConnection _socketConnection;
+  late Stream<List<Chat>> _chatStream;
 
   @override
   void initState() {
     super.initState();
     _socketConnection = SocketConnection();
     _socketConnection.initializeSocketConnection();
+  }
+
+  Stream<List<Chat>> _getChatStream() async* {
+    final dbHelper = DatabaseHelper();
+    final db = await dbHelper.database;
+
+    try {
+      final List<Map<String, dynamic>> chats =
+          await db.query('chats', orderBy: 'id DESC');
+
+      final List<Chat> chatList = List.generate(chats.length, (index) {
+        return Chat(
+            id: chats[index]['id'],
+            name: chats[index]['name'],
+            receiver: chats[index]['receiver'],
+            imageUrl: chats[index]['image']);
+      });
+
+      yield chatList;
+
+      await for (final chat
+          in db.query('chats', orderBy: 'id DESC').asStream()) {
+        final List<Chat> updatedChatList = List.generate(chats.length, (index) {
+          return Chat(
+              id: chat[index]['id'] as String,
+              name: chat[index]['name'] as String,
+              receiver: chat[index]['receiver'] as String,
+              imageUrl: chat[index]['image'] as String?);
+        });
+
+        yield updatedChatList;
+        updateChats();
+      }
+    } on DatabaseException catch (e) {
+      yield [];
+    }
+  }
+
+  void updateChats() {
+    setState(() {
+      _chatStream = _getChatStream();
+    });
   }
 
   Future<List<Chat>> _getChats() async {
@@ -100,10 +144,11 @@ class _ChatListPageState extends State<ChatListPage> {
       appBar: const MyAppBar(
         height: 140,
       ),
-      body: FutureBuilder<List<Chat>>(
-        future: _getChats(),
+      body: StreamBuilder<List<Chat>>(
+        stream: _getChatStream(),
         builder: (context, snapshot) {
           if (snapshot.hasData) {
+            print('I NOW HAVE ${snapshot.data?.length} CHATS');
             return ListView.builder(
               itemCount: snapshot.data?.length,
               itemBuilder: (context, index) {

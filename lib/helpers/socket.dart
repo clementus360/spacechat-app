@@ -68,8 +68,6 @@ class SocketConnection {
   Future<void> initializeSocketConnection() async {
     print("initializing socket.......");
     if (_isConnected || _isConnecting) {
-      print("testoo");
-      print('$_isConnected and $_isConnecting');
       return;
     }
 
@@ -77,13 +75,9 @@ class SocketConnection {
 
     try {
       final uri = Uri.parse('${ApiEndpoints.SOCKET}/$_userId?ticket=$_ticket');
-      print(uri);
       _channel = WebSocketChannel.connect(uri);
       _isConnected = true;
       _isConnecting = false;
-
-      print("chhallenge");
-      print(_channel);
 
       // Timer.periodic(const Duration(minutes: 1), (timer) {
       //   if (!_isConnected) {
@@ -97,6 +91,7 @@ class SocketConnection {
           final Message messageObj = Message.fromJson(jsonMessage);
           _messageStreamController.add(messageObj);
           print(jsonMessage);
+          createChat(messageObj);
           addMessageToDB(messageObj);
         },
         onError: (error) {
@@ -109,6 +104,44 @@ class SocketConnection {
       _isConnecting = false;
       print("error connecting");
       _reconnect();
+    }
+  }
+
+  Future<http.Response> getUserName(String userId) {
+    var uri = '${ApiEndpoints.USERNAME}/$userId';
+    return http.get(
+      Uri.parse(uri),
+    );
+  }
+
+  Future<void> createChat(Message message) async {
+    final dbHelper = DatabaseHelper();
+    final db = await dbHelper.database;
+    final result =
+        await db.query("chats", where: 'id = ?', whereArgs: [message.chatId]);
+
+    print('RESULT = ${result.isEmpty}');
+
+    if (result.isEmpty) {
+      try {
+        final response = await getUserName(message.sender);
+        if (response.statusCode == 200) {
+          print("it workss");
+          final body = json.decode(response.body);
+          final userName = body["username"];
+          print('NAME: ${userName}');
+          db.insert('chats', {
+            'id': message.chatId,
+            'name': userName,
+            'receiver': message.sender
+          });
+        } else {
+          print("failed to get chat");
+        }
+      } catch (err) {
+        print("Failed to fetch username");
+        return;
+      }
     }
   }
 

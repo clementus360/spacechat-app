@@ -280,8 +280,6 @@ class _ChatPageState extends State<ChatPage> {
     final dbHelper = DatabaseHelper();
     final db = await dbHelper.database;
 
-    print('${db.isOpen}:1');
-
     try {
       final List<Map<String, dynamic>> messages = await db.query('messages',
           where: 'chatId = ?',
